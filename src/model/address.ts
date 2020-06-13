@@ -14,6 +14,7 @@ export interface AddressAttribute {
   zh_name: string;
   en_name: string;
   value: string;
+  id?: number;
 }
 
 export interface StreetNo {
