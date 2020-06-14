@@ -15,5 +15,8 @@ export const createClient = (): Knex =>
   });
 
 export const insertItem = async (db: Knex, table: string, item: AddressAttribute) => {
-  return await db(table).insert(item);
+  return await db(table)
+    .insert(item)
+    .then((value) => console.log(`Inserted ${item.en_name} to ${value}`))
+    .catch((err) => console.error(err.code));
 };

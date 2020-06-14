@@ -19,3 +19,9 @@ Hong Kong full address cloned from post service
 - It is design for running once only, it breaks when you run it 2nd+ time.
 - No Test
 - No api call fail remedies
+
+## Difficulty
+
+- HKPost Api is inconsistent
+- Return in HTML form
+- Not very experienced on DB design

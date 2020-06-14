@@ -1,14 +1,22 @@
+import { BaseOption, BuildingInfoOption, BuildingOption } from '../model/requestOption';
+
 import { AddressAttribute } from '../model/address';
-import { BaseOption } from '../model/requestOption';
 import axios from 'axios';
 
-export const fetch = async (url: string, options: BaseOption) => {
+export const fetch = async (
+  url: string,
+  options: BaseOption | BuildingOption | BuildingInfoOption,
+): Promise<string> => {
   url = url + concatOptions(options);
+  console.log(url);
   const res = await axios.get(url);
+  if (res.status !== 200) {
+    throw Error('HKPost Api returned' + res.status);
+  }
   return res.data;
 };
 
-const concatOptions = (options: BaseOption) => {
+const concatOptions = (options: BaseOption | BuildingOption | BuildingInfoOption) => {
   let str = '';
   Object.entries(options).forEach(([key, val]) => {
     const tmp = `${key}=${val.toString()}`;
@@ -23,6 +31,15 @@ export const fetchAllFromHKPost = async (url: string, configs: BaseOption[]) => 
   });
   const results = await Promise.all(res);
   return results.map((val) => extractFeatures(val));
+};
+
+export const fetchFromHKPost = async (url: string, config: BaseOption | BuildingOption | BuildingInfoOption) => {
+  try {
+    const res = await fetch(url, config);
+    return extractFeatures(res);
+  } catch (err) {
+    throw err;
+  }
 };
 
 const extractFeatures = (rawStr: string): AddressAttribute[] | undefined => {
@@ -49,4 +66,24 @@ const extractFeatures = (rawStr: string): AddressAttribute[] | undefined => {
     }
   });
   return features;
+};
+
+export const fetchStreet = (config: BuildingInfoOption) => {
+  const url = process.env.STREET_URL || ' ';
+  return fetchFromHKPost(url, { ...config, type_value: 'Street' });
+};
+
+export const fetchEstate = (config: BuildingInfoOption) => {
+  const url = process.env.ESTATE_URL || ' ';
+  return fetchFromHKPost(url, { ...config, type_value: 'Estate' });
+};
+
+export const fetchPhase = (config: BuildingInfoOption) => {
+  const url = process.env.PHASE_URL || ' ';
+  return fetchFromHKPost(url, { ...config });
+};
+
+export const fetchBuilding = (config: BuildingOption) => {
+  const url = process.env.BUILDING_URL || ' ';
+  return fetchFromHKPost(url, { ...config, type_value: 'Building' });
 };

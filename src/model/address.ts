@@ -21,3 +21,10 @@ export interface StreetNo {
   name: string;
   value: string;
 }
+
+export interface Building extends AddressAttribute {
+  region: AddressAttribute;
+  district: AddressAttribute;
+  street: AddressAttribute[];
+  estate: AddressAttribute[];
+}
