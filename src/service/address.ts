@@ -1,6 +1,6 @@
-import { Address, AddressAttribute, Building } from '../model/address';
-import { BuildingOption, baseBuildingInfoOption, baseBuildingOption } from '../model/requestOption';
-import { fetchBuilding, fetchPhase, fetchStreet } from './fetcher';
+import { Address, AddressAttribute, Building } from '../model/addressModel';
+import { BuildingConfig, BuildingInfoConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/configModel';
+import { fetchBuilding, fetchPhase, fetchStreet, fetchStreetNo } from './fetcher';
 
 import isEqual from 'lodash/isEqual';
 
@@ -13,7 +13,6 @@ export const getUniqueAddresses = async (building: Building) => {
   };
   if (!building.estate || building.estate.length < 1) {
     // Not a building from estate
-    console.log(building);
     building.street.forEach((street) => {
       addresses.push({
         building: buildingInfo,
@@ -29,7 +28,20 @@ export const getUniqueAddresses = async (building: Building) => {
       if (addr) addresses.push(addr);
     }
   }
-
+  // Add StreetNo if exist
+  for (let i = 0; i < addresses.length; i++) {
+    const addr = addresses[i];
+    const config: BuildingInfoConfig = {
+      ...baseBuildingInfoConfig,
+      street: addr.street?.value || '',
+      district: addr.district.value || '',
+      estate: addr.estate?.value || '',
+      phase: addr.phase?.value || '',
+      building: addr.building.value || '',
+    };
+    const streetNo = await fetchStreetNo(config);
+    addresses[i] = { ...addr, streetNo: streetNo[0] || undefined };
+  }
   return addresses;
 };
 
@@ -49,7 +61,7 @@ const getAddrFromEstate = async (
   };
   if (street.length > 0) {
     const config = {
-      ...baseBuildingInfoOption,
+      ...baseBuildingInfoConfig,
       building: building.value,
       zone: region.value,
       district: district.value,
@@ -61,15 +73,15 @@ const getAddrFromEstate = async (
 
   // Check Phase
   const config = {
-    ...baseBuildingInfoOption,
+    ...baseBuildingInfoConfig,
     district: district.value,
     estate: estate.value,
   };
   const phases = await fetchPhase(config);
   if (phases) {
     for (const phase of phases) {
-      const buildingConfig: BuildingOption = {
-        ...baseBuildingOption,
+      const buildingConfig: BuildingConfig = {
+        ...baseBuildingConfig,
         zone: region.value,
         district: district.value,
         estate_name: estate.value,

@@ -1,13 +1,13 @@
-export interface BaseOption {
+export interface BaseConfig {
   lang?: string;
   lang1?: string;
 }
 
-export interface DistrictOption extends BaseOption {
+export interface DistrictConfig extends BaseConfig {
   zone_value: number;
 }
 
-export interface BuildingOption extends BaseOption {
+export interface BuildingConfig extends BaseConfig {
   type_value: string;
   zone: string;
   district: string;
@@ -19,7 +19,7 @@ export interface BuildingOption extends BaseOption {
   status: string;
 }
 
-export interface BuildingInfoOption extends BaseOption {
+export interface BuildingInfoConfig extends BaseConfig {
   type_value: string;
   zone: string;
   district: string;
@@ -31,7 +31,7 @@ export interface BuildingInfoOption extends BaseOption {
   status: string;
 }
 
-export const baseBuildingOption: BuildingOption = {
+export const baseBuildingConfig: BuildingConfig = {
   lang: 'en_US',
   type_value: '',
   zone: '',
@@ -44,7 +44,7 @@ export const baseBuildingOption: BuildingOption = {
   status: '0',
 };
 
-export const baseBuildingInfoOption: BuildingInfoOption = {
+export const baseBuildingInfoConfig: BuildingInfoConfig = {
   lang: 'en_US',
   lang1: 'en_US',
   type_value: '',

@@ -22,6 +22,7 @@ Hong Kong full address cloned from post service
 
 ## Difficulty
 
+- Address is inconsistent in nature
 - HKPost Api is inconsistent
-- Return in HTML form
+- Api returns in HTML form
 - Not very experienced on DB design

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { AddressAttribute } from '../model/address';
+import { BaseSchema } from '../model/dbSchemaModel';
 import Knex from 'knex';
 
 export const createClient = (): Knex =>
@@ -14,9 +14,34 @@ export const createClient = (): Knex =>
     },
   });
 
-export const insertItem = async (db: Knex, table: string, item: AddressAttribute): Promise<void> => {
+export const insertItem = async (db: Knex, table: string, item: BaseSchema): Promise<any> => {
   return await db(table)
     .insert(item)
-    .then((value) => console.log(`Inserted ${item.en_name} to ${value}`))
-    .catch((err) => console.error(err.code));
+    .then((result) => result[0])
+    .catch((err) => {
+      console.error(err.code);
+      return undefined;
+    });
 };
+
+export const findItem = async (db: Knex, table: string, filter: BaseSchema): Promise<any> => {
+  filter = removeEmpty(filter as Record<string, never>);
+  return await db
+    .select()
+    .from(table)
+    .where(filter)
+    .first()
+    .then((result) => result)
+    .catch((err) => {
+      console.error(err.code);
+      return undefined;
+    });
+};
+
+export const selectOrInsertItem = async (db: Knex, table: string, item: BaseSchema): Promise<any> => {
+  const result = await findItem(db, table, item);
+  return result ? result.id : insertItem(db, table, item);
+};
+
+const removeEmpty = (obj: Record<string, never>): Record<string, never> =>
+  Object.entries(obj).reduce((a: Record<string, never>, [k, v]) => (v === undefined ? a : ((a[k] = v), a)), {});

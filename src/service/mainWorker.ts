@@ -1,10 +1,12 @@
-import { Address, AddressAttribute, Building } from '../model/address';
-import { BuildingOption, DistrictOption, baseBuildingInfoOption, baseBuildingOption } from '../model/requestOption';
+import { Address, AddressAttribute, Building } from '../model/addressModel';
+import { BuildingConfig, DistrictConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/configModel';
 import { fetchAllFromHKPost, fetchBuilding, fetchEstate, fetchStreet } from './fetcher';
+import { insertItem, selectOrInsertItem } from './db';
 
+import { BaseSchema } from '../model/dbSchemaModel';
 import Knex from 'knex';
+import { add } from 'lodash';
 import { getUniqueAddresses } from './address';
-import { insertItem } from './db';
 
 const mainWorker = async (db: Knex): Promise<void> => {
   // Regions
@@ -12,27 +14,16 @@ const mainWorker = async (db: Knex): Promise<void> => {
     { value: '1', en_name: 'HONG KONG', zh_name: '香港' },
     // { value: '2', en_name: 'KOWLOON', zh_name: '九龍' },
     // { value: '3', en_name: 'NEW TERRITORIES', zh_name: '新界' },
+    // FIXME: DEBUG USE
   ];
 
-  await Promise.all(regions.map((r) => insertItem(db, 'regions', r)));
-
   // Districts
-  const districtConfigs: DistrictOption[] = regions.map((region) => ({
+  const districtConfigs: DistrictConfig[] = regions.map((region) => ({
     lang1: 'en_US',
     zone_value: Number(region.value),
   }));
   const districtsUrl = process.env.DISTRICT_URL || ' ';
   const districts = await fetchAllFromHKPost(districtsUrl, districtConfigs);
-  await Promise.all(
-    districts
-      .map((region, idx) => {
-        return region?.map((district) => {
-          const tmp = { ...district, region: idx + 1 };
-          return insertItem(db, 'districts', tmp);
-        });
-      })
-      .flat(),
-  );
 
   // Buildings
   let buildings: Building[] = [];
@@ -42,11 +33,13 @@ const mainWorker = async (db: Knex): Promise<void> => {
     if (district)
       for (const dist of district) {
         if (dist.en_name === 'CHAI WAN') {
+          // FIXME: DEBUG USE
           const tmp = await getBuildings(region, dist);
           const tmpBuilding: Building[] = [];
           // For each building fetch information with the building value
           for (const b of tmp) tmpBuilding.push(await fetchBuildingInfo(b));
           buildings = buildings.concat(tmpBuilding);
+          break; // FIXME: DEBUG USE
         }
       }
   }
@@ -59,12 +52,33 @@ const mainWorker = async (db: Knex): Promise<void> => {
   }
 
   console.log(buildingAddr);
+
+  // TODO: Add pokeguide api
+
+  // TODO: load into db
+  for (const addr of buildingAddr) {
+    const region = await selectOrInsertItem(db, 'regions', addr.region as BaseSchema);
+    const district = await selectOrInsertItem(db, 'districts', { ...addr.district, region: region } as BaseSchema);
+    const street = addr.street
+      ? await selectOrInsertItem(db, 'streets', { ...addr.street, district: district } as BaseSchema)
+      : undefined;
+    const streetNo = addr.streetNo
+      ? await selectOrInsertItem(db, 'streetNos', { ...addr.streetNo, street: street } as BaseSchema)
+      : undefined;
+    const estate = addr.estate
+      ? await selectOrInsertItem(db, 'estates', { ...addr.estate, district: district, street: street } as BaseSchema)
+      : undefined;
+    const phase = addr.phase
+      ? await selectOrInsertItem(db, 'phases', { ...addr.phase, estate: estate } as BaseSchema)
+      : undefined;
+  }
+
   await db.destroy();
 };
 
 const getBuildings = async (region: AddressAttribute, district: AddressAttribute) => {
-  const config: BuildingOption = {
-    ...baseBuildingOption,
+  const config: BuildingConfig = {
+    ...baseBuildingConfig,
     zone: region.value,
     district: district.value,
   };
@@ -85,7 +99,7 @@ const getBuildings = async (region: AddressAttribute, district: AddressAttribute
 
 const fetchBuildingInfo = async (building: Building) => {
   const baseConfig = {
-    ...baseBuildingInfoOption,
+    ...baseBuildingInfoConfig,
     building: building.value,
     zone: building.region.value,
     district: building.district.value,
