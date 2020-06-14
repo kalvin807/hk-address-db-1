@@ -25,7 +25,7 @@ const concatOptions = (options: BaseOption | BuildingOption | BuildingInfoOption
   return str;
 };
 
-export const fetchAllFromHKPost = async (url: string, configs: BaseOption[]) => {
+export const fetchAllFromHKPost = async (url: string, configs: BaseOption[]): Promise<AddressAttribute[][]> => {
   const res = configs.map((configs) => {
     return fetch(url, configs);
   });
@@ -33,7 +33,10 @@ export const fetchAllFromHKPost = async (url: string, configs: BaseOption[]) => 
   return results.map((val) => extractFeatures(val));
 };
 
-export const fetchFromHKPost = async (url: string, config: BaseOption | BuildingOption | BuildingInfoOption) => {
+export const fetchFromHKPost = async (
+  url: string,
+  config: BaseOption | BuildingOption | BuildingInfoOption,
+): Promise<AddressAttribute[]> => {
   try {
     const res = await fetch(url, config);
     return extractFeatures(res);
@@ -42,7 +45,7 @@ export const fetchFromHKPost = async (url: string, config: BaseOption | Building
   }
 };
 
-const extractFeatures = (rawStr: string): AddressAttribute[] | undefined => {
+const extractFeatures = (rawStr: string): AddressAttribute[] => {
   const htmlRegex = /<option value="(.+)">(.*)<.*>/g; // Expected to grep value and the value of the html
   const matchedLines = rawStr.split('\n').map((line) => {
     htmlRegex.lastIndex = 0;
@@ -51,7 +54,7 @@ const extractFeatures = (rawStr: string): AddressAttribute[] | undefined => {
       return [matched[1], matched[2]];
     }
   });
-  const features = [] as AddressAttribute[];
+  const features: AddressAttribute[] = [];
   const nameRegex = /(.+) &nbsp;\((.+)\)/g; // Expected to get the Eng Name and Chi name in the bracket
   matchedLines.forEach((line) => {
     if (line) {
@@ -68,22 +71,22 @@ const extractFeatures = (rawStr: string): AddressAttribute[] | undefined => {
   return features;
 };
 
-export const fetchStreet = (config: BuildingInfoOption) => {
+export const fetchStreet = (config: BuildingInfoOption): Promise<AddressAttribute[]> => {
   const url = process.env.STREET_URL || ' ';
   return fetchFromHKPost(url, { ...config, type_value: 'Street' });
 };
 
-export const fetchEstate = (config: BuildingInfoOption) => {
+export const fetchEstate = (config: BuildingInfoOption): Promise<AddressAttribute[]> => {
   const url = process.env.ESTATE_URL || ' ';
   return fetchFromHKPost(url, { ...config, type_value: 'Estate' });
 };
 
-export const fetchPhase = (config: BuildingInfoOption) => {
+export const fetchPhase = (config: BuildingInfoOption): Promise<AddressAttribute[]> => {
   const url = process.env.PHASE_URL || ' ';
   return fetchFromHKPost(url, { ...config });
 };
 
-export const fetchBuilding = (config: BuildingOption) => {
+export const fetchBuilding = (config: BuildingOption): Promise<AddressAttribute[]> => {
   const url = process.env.BUILDING_URL || ' ';
   return fetchFromHKPost(url, { ...config, type_value: 'Building' });
 };

@@ -13,7 +13,7 @@ export const getUniqueAddresses = async (building: Building) => {
   };
   if (!building.estate || building.estate.length < 1) {
     // Not a building from estate
-    console.log(building)
+    console.log(building);
     building.street.forEach((street) => {
       addresses.push({
         building: buildingInfo,
