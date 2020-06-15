@@ -1,6 +1,11 @@
 import { Address, AddressAttribute, Building } from '../model/addressModel';
-import { BuildingConfig, BuildingInfoConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/configModel';
-import { fetchBuilding, fetchPhase, fetchStreet, fetchStreetNo } from './fetcher';
+import {
+  BuildingConfig,
+  BuildingInfoConfig,
+  baseBuildingConfig,
+  baseBuildingInfoConfig,
+} from '../model/hkPostApiModel';
+import { fetchBuilding, fetchPhase, fetchStreet, fetchStreetNo } from './hkPostFetcher';
 
 import isEqual from 'lodash/isEqual';
 

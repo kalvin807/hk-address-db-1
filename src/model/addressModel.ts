@@ -1,3 +1,5 @@
+import { Geocode, LatLng } from './geoModel';
+
 export interface Address {
   region: AddressAttribute;
   district: AddressAttribute;
@@ -8,6 +10,8 @@ export interface Address {
   phase?: AddressAttribute;
   floor?: AddressAttribute;
   unit?: AddressAttribute;
+  latlng?: LatLng;
+  geocode?: Geocode;
 }
 
 export interface AddressAttribute {

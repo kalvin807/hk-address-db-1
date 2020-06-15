@@ -1,12 +1,11 @@
 import { Address, AddressAttribute, Building } from '../model/addressModel';
-import { BuildingConfig, DistrictConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/configModel';
-import { fetchAllFromHKPost, fetchBuilding, fetchEstate, fetchStreet } from './fetcher';
-import { insertItem, selectOrInsertItem } from './db';
+import { BuildingConfig, DistrictConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
+import { fetchAllFromHKPost, fetchBuilding, fetchEstate, fetchStreet } from './hkPostFetcher';
+import { getGeocoding, getLatLng } from './geo';
 
-import { BaseSchema } from '../model/dbSchemaModel';
 import Knex from 'knex';
-import { add } from 'lodash';
 import { getUniqueAddresses } from './address';
+import { selectOrInsertItem } from './db';
 
 const mainWorker = async (db: Knex): Promise<void> => {
   // Regions
@@ -55,22 +54,75 @@ const mainWorker = async (db: Knex): Promise<void> => {
 
   // TODO: Add pokeguide api
 
-  // TODO: load into db
   for (const addr of buildingAddr) {
-    const region = await selectOrInsertItem(db, 'regions', addr.region as BaseSchema);
-    const district = await selectOrInsertItem(db, 'districts', { ...addr.district, region: region } as BaseSchema);
-    const street = addr.street
-      ? await selectOrInsertItem(db, 'streets', { ...addr.street, district: district } as BaseSchema)
-      : undefined;
-    const streetNo = addr.streetNo
-      ? await selectOrInsertItem(db, 'streetNos', { ...addr.streetNo, street: street } as BaseSchema)
-      : undefined;
-    const estate = addr.estate
-      ? await selectOrInsertItem(db, 'estates', { ...addr.estate, district: district, street: street } as BaseSchema)
-      : undefined;
-    const phase = addr.phase
-      ? await selectOrInsertItem(db, 'phases', { ...addr.phase, estate: estate } as BaseSchema)
-      : undefined;
+    //Fetch geo info from pokeguide api
+    addr.latlng = await getLatLng(addr);
+    addr.geocode = await getGeocoding(addr);
+    // Upsert static Data
+    const region = await selectOrInsertItem(db, 'regions', addr.region);
+    const district = await selectOrInsertItem(db, 'districts', addr.district);
+    const street = await selectOrInsertItem(db, 'streets', addr.street);
+    const streetNo = await selectOrInsertItem(db, 'streetNos', addr.streetNo);
+    const estate = await selectOrInsertItem(db, 'estates', addr.estate);
+    const phase = await selectOrInsertItem(db, 'phases', addr.phase);
+    const building = await selectOrInsertItem(db, 'buildings', addr.building);
+    // Upsert relationship
+    const districtLoc = await selectOrInsertItem(db, 'districtLocations', {
+      district: district,
+      region: region,
+    });
+    const streetLoc =
+      street && district
+        ? await selectOrInsertItem(db, 'streetLocations', {
+            district: district,
+            street: street,
+          })
+        : undefined;
+    const streetNoLoc =
+      streetLoc && streetNo
+        ? await selectOrInsertItem(db, 'streetNoLocations', {
+            streetLocation: streetLoc,
+            streetNo: streetNo,
+          })
+        : undefined;
+    const estateLoc =
+      estate && district
+        ? await selectOrInsertItem(db, 'estateLocations', {
+            estate: estate,
+            district: district,
+            street: street,
+            streetNo: streetNo,
+          })
+        : undefined;
+    const phaseLoc =
+      phase && estateLoc
+        ? await selectOrInsertItem(db, 'phaseLocations', {
+            phase: phase,
+            estateLocation: estateLoc,
+          })
+        : undefined;
+    const buildingLoc = await selectOrInsertItem(db, 'buildingLocations', {
+      building: building,
+      district: district,
+      street: street,
+      streetNo: streetNo,
+      estate: estate,
+      phase: phase,
+    });
+    const latlng = await selectOrInsertItem(db, 'latlngs', {
+      buildingLocation: buildingLoc,
+      lat: addr.latlng.lat,
+      lng: addr.latlng.lng,
+      raw: addr.latlng.raw,
+      remark: addr.latlng.remark,
+    });
+    const geocode = await selectOrInsertItem(db, 'geocodes', {
+      buildingLocation: buildingLoc,
+      latlng: latlng,
+      result: addr.geocode?.result,
+      remark: addr.geocode?.remark,
+      match: addr.geocode?.match,
+    });
   }
 
   await db.destroy();

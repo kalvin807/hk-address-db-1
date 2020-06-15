@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { BaseSchema } from '../model/dbSchemaModel';
+import { BaseSchema, GeoSchema, RelationshipSchema } from '../model/dbSchemaModel';
+
 import Knex from 'knex';
+import { removeEmpty } from '../utils/helper';
 
 export const createClient = (): Knex =>
   Knex({
@@ -14,7 +16,11 @@ export const createClient = (): Knex =>
     },
   });
 
-export const insertItem = async (db: Knex, table: string, item: BaseSchema): Promise<any> => {
+export const insertItem = async (
+  db: Knex,
+  table: string,
+  item: BaseSchema | RelationshipSchema,
+): Promise<number | undefined> => {
   return await db(table)
     .insert(item)
     .then((result) => result[0])
@@ -24,24 +30,31 @@ export const insertItem = async (db: Knex, table: string, item: BaseSchema): Pro
     });
 };
 
-export const findItem = async (db: Knex, table: string, filter: BaseSchema): Promise<any> => {
-  filter = removeEmpty(filter as Record<string, never>);
+export const findItemId = async (
+  db: Knex,
+  table: string,
+  filter: BaseSchema | RelationshipSchema,
+): Promise<number | undefined> => {
   return await db
     .select()
     .from(table)
     .where(filter)
     .first()
-    .then((result) => result)
+    .then((result) => (result?.id ? result.id : result))
     .catch((err) => {
       console.error(err.code);
       return undefined;
     });
 };
 
-export const selectOrInsertItem = async (db: Knex, table: string, item: BaseSchema): Promise<any> => {
-  const result = await findItem(db, table, item);
-  return result ? result.id : insertItem(db, table, item);
+export const selectOrInsertItem = async (
+  db: Knex,
+  table: string,
+  item: BaseSchema | RelationshipSchema | GeoSchema | undefined,
+): Promise<number | undefined> => {
+  if (!item) return undefined;
+  item = { ...item, value: undefined };
+  item = removeEmpty(item as Record<string, never>);
+  const result = await findItemId(db, table, item);
+  return result ? result : insertItem(db, table, item);
 };
-
-const removeEmpty = (obj: Record<string, never>): Record<string, never> =>
-  Object.entries(obj).reduce((a: Record<string, never>, [k, v]) => (v === undefined ? a : ((a[k] = v), a)), {});
