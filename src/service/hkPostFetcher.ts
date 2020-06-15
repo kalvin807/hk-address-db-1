@@ -1,12 +1,11 @@
-import { AddressAttribute, StreetNo } from '../model/addressModel';
-import { BaseConfig, BuildingConfig, BuildingInfoConfig } from '../model/hkPostApiModel';
-
-import { fetch } from './fetcher';
+import { Address, AddressAttribute, Building, StreetNo, VaildAddress } from '../model/addressModel';
+import { BaseConfig, BuildingConfig, BuildingInfoConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
+import { fetch, post } from './fetcher';
 
 const extractFeatures = (rawStr: string): AddressAttribute[] => {
   const features: AddressAttribute[] = [];
   rawStr.split('\n').map((line) => {
-    const matched = line.match(/.*"(.+)">(.+) &nbsp;\((.+)\)<.*>/);
+    const matched = line.match(/([^"]+)">[ ]?(.*) &nbsp;\(([^)]+)/);
     if (matched)
       features.push({
         value: matched[1],
@@ -53,14 +52,24 @@ export const fetchBuilding = async (config: BuildingConfig): Promise<AddressAttr
   const url = process.env.BUILDING_URL || ' ';
   return fetchFromHKPost(url, { ...config, type_value: 'Building' });
 };
-// Edge case
 
+export const fetchFloor = async (config: BuildingInfoConfig): Promise<AddressAttribute[]> => {
+  const url = process.env.FLOOR_URL || ' ';
+  return fetchFromHKPost(url, config);
+};
+
+export const fetchUnit = async (config: BuildingInfoConfig): Promise<AddressAttribute[]> => {
+  const url = process.env.UNIT_URL || ' ';
+  return fetchFromHKPost(url, config);
+};
+
+// Edge case
 export const fetchStreetNo = async (config: BuildingInfoConfig): Promise<StreetNo[]> => {
   const url = process.env.STREETNO_URL || ' ';
   const res = await fetch(url, config);
   const streetNos: StreetNo[] = [];
   res.split('\n').forEach((line: string) => {
-    const matched = line.match(/<.+"(.+)">(.*)<.*>/);
+    const matched = line.match(/"([^"]+)">[ ]?([^<]+)<\//);
     if (matched)
       streetNos.push({
         value: matched[1],
@@ -68,4 +77,72 @@ export const fetchStreetNo = async (config: BuildingInfoConfig): Promise<StreetN
       });
   });
   return streetNos;
+};
+
+export const fetchValidAddr = async (addr: Address): Promise<VaildAddress | undefined> => {
+  // Prepare form data
+  const data: any = {
+    zone: addr.region.value,
+    district: addr.district.value,
+    street: addr.street?.value,
+    strno: addr.streetNo?.value,
+    estate: addr.estate?.value,
+    phase: addr.phase?.value,
+    building: addr.building?.value,
+    floor: addr.floor?.value,
+    unit: addr.unit?.value,
+    lang: 'zh_TW',
+  };
+  Object.entries(data).forEach(([key, val]) => {
+    if (val) data[key] = `${val}`.replace(/[ ]/g, '+');
+    else delete data[key];
+  });
+  const url = process.env.VALIDADDR_URL || ' ';
+
+  // Send the POST request
+  const res = await post(url, data);
+  let validAddr: VaildAddress = { remark: '' };
+
+  // Grep the address from html
+  if (res && res.data) {
+    const rawHtml: string = res.data;
+    const match = rawHtml.match(/<[^>]+><[^>]+><[^>]+><[^>]+><f[^>]+>(.*)<\/f/gm);
+
+    if (!match) validAddr.remark = 'Incorrect POST';
+
+    if (match && match.length > 0) {
+      const validAddrs = match.map((str) => {
+        const tmp = str.match(/<f[^>]+>(.*)<\/f/);
+        if (tmp) return tmp[1].replace(/<br \/\>/g, '\n');
+        else {
+          validAddr.remark = 'Incorrect Regex when prettify address';
+          return str;
+        }
+      });
+
+      if (validAddrs)
+        validAddr = {
+          ...validAddr,
+          en_name: validAddrs[0],
+          zh_name: validAddrs[1],
+        };
+    }
+  }
+  return validAddr;
+};
+
+export const fetchBuildingInfo = async (building: Building) => {
+  const baseConfig = {
+    ...baseBuildingInfoConfig,
+    building: building.value,
+    zone: building.region.value,
+    district: building.district.value,
+  };
+  const street = await fetchStreet(baseConfig);
+  const estate = await fetchEstate(baseConfig);
+  return {
+    ...building,
+    street: street,
+    estate: estate,
+  } as Building;
 };

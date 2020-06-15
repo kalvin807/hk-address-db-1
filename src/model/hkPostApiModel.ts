@@ -29,6 +29,8 @@ export interface BuildingInfoConfig extends BaseConfig {
   streetno: string;
   phase: string;
   status: string;
+  strno?: string;
+  floor?: string;
 }
 
 export const baseBuildingConfig: BuildingConfig = {
@@ -56,4 +58,5 @@ export const baseBuildingInfoConfig: BuildingInfoConfig = {
   streetno: '',
   phase: '',
   status: '0',
+  strno: '',
 };

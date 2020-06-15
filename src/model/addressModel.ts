@@ -32,3 +32,10 @@ export interface Building extends AddressAttribute {
   street: AddressAttribute[];
   estate: AddressAttribute[];
 }
+
+export interface VaildAddress {
+  zh_name?: string;
+  en_name?: string;
+  id?: number;
+  remark?: string;
+}

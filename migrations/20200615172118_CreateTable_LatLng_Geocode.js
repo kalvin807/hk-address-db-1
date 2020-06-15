@@ -15,7 +15,7 @@ exports.up = function (knex) {
       table.foreign('buildingLocation').references('buildingLocations.id');
       table.integer('latlng').unsigned().notNullable();
       table.foreign('latlng').references('latlngs.id');
-      table.string('result', 255);
+      table.string('result');
       table.text('remark');
       table.boolean('match');
     });

@@ -4,10 +4,15 @@
         "editor.tabSize": 2
     },
     "cSpell.words": [
+        "Addrs",
+        "Geocode",
         "Upsert",
+        "geocodes",
         "latlng",
+        "latlngs",
         "longlat",
         "nbsp",
+        "pokeguide",
         "streetno"
     ]
 }

@@ -24,3 +24,13 @@ const concatOptions = (options: BaseConfig | BuildingConfig | BuildingInfoConfig
   });
   return encodeURI(str);
 };
+
+export const post = async (url: string, formData: any) => {
+  try {
+    url = url + concatOptions(formData);
+    const res = await axios.post(url);
+    return res;
+  } catch (err) {
+    throw Error('HKPost Post failed!' + err);
+  }
+};

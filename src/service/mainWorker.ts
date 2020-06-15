@@ -1,6 +1,15 @@
 import { Address, AddressAttribute, Building } from '../model/addressModel';
 import { BuildingConfig, DistrictConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
-import { fetchAllFromHKPost, fetchBuilding, fetchEstate, fetchStreet } from './hkPostFetcher';
+import {
+  fetchAllFromHKPost,
+  fetchBuilding,
+  fetchBuildingInfo,
+  fetchEstate,
+  fetchFloor,
+  fetchStreet,
+  fetchUnit,
+  fetchValidAddr,
+} from './hkPostFetcher';
 import { getGeocoding, getLatLng } from './geo';
 
 import Knex from 'knex';
@@ -11,9 +20,8 @@ const mainWorker = async (db: Knex): Promise<void> => {
   // Regions
   const regions: AddressAttribute[] = [
     { value: '1', en_name: 'HONG KONG', zh_name: '香港' },
-    // { value: '2', en_name: 'KOWLOON', zh_name: '九龍' },
-    // { value: '3', en_name: 'NEW TERRITORIES', zh_name: '新界' },
-    // FIXME: DEBUG USE
+    { value: '2', en_name: 'KOWLOON', zh_name: '九龍' },
+    { value: '3', en_name: 'NEW TERRITORIES', zh_name: '新界' },
   ];
 
   // Districts
@@ -31,17 +39,14 @@ const mainWorker = async (db: Knex): Promise<void> => {
     const district = districts[i];
     if (district)
       for (const dist of district) {
-        if (dist.en_name === 'CHAI WAN') {
-          // FIXME: DEBUG USE
-          const tmp = await getBuildings(region, dist);
-          const tmpBuilding: Building[] = [];
-          // For each building fetch information with the building value
-          for (const b of tmp) tmpBuilding.push(await fetchBuildingInfo(b));
-          buildings = buildings.concat(tmpBuilding);
-          break; // FIXME: DEBUG USE
-        }
+        const tmp = await getBuildings(region, dist);
+        const tmpBuilding: Building[] = [];
+        // For each building fetch information with the building value
+        for (const b of tmp) tmpBuilding.push(await fetchBuildingInfo(b));
+        buildings = buildings.concat(tmpBuilding);
       }
   }
+
   // For each building fetch information with the building value
   // Convert building to unique building address
   let buildingAddr: Address[] = [];
@@ -49,10 +54,6 @@ const mainWorker = async (db: Knex): Promise<void> => {
     const tmp = await getUniqueAddresses(building);
     buildingAddr = buildingAddr.concat(tmp);
   }
-
-  console.log(buildingAddr);
-
-  // TODO: Add pokeguide api
 
   for (const addr of buildingAddr) {
     //Fetch geo info from pokeguide api
@@ -67,7 +68,7 @@ const mainWorker = async (db: Knex): Promise<void> => {
     const phase = await selectOrInsertItem(db, 'phases', addr.phase);
     const building = await selectOrInsertItem(db, 'buildings', addr.building);
     // Upsert relationship
-    const districtLoc = await selectOrInsertItem(db, 'districtLocations', {
+    await selectOrInsertItem(db, 'districtLocations', {
       district: district,
       region: region,
     });
@@ -78,13 +79,11 @@ const mainWorker = async (db: Knex): Promise<void> => {
             street: street,
           })
         : undefined;
-    const streetNoLoc =
-      streetLoc && streetNo
-        ? await selectOrInsertItem(db, 'streetNoLocations', {
-            streetLocation: streetLoc,
-            streetNo: streetNo,
-          })
-        : undefined;
+    if (streetLoc && streetNo)
+      await selectOrInsertItem(db, 'streetNoLocations', {
+        streetLocation: streetLoc,
+        streetNo: streetNo,
+      });
     const estateLoc =
       estate && district
         ? await selectOrInsertItem(db, 'estateLocations', {
@@ -94,13 +93,12 @@ const mainWorker = async (db: Knex): Promise<void> => {
             streetNo: streetNo,
           })
         : undefined;
-    const phaseLoc =
-      phase && estateLoc
-        ? await selectOrInsertItem(db, 'phaseLocations', {
-            phase: phase,
-            estateLocation: estateLoc,
-          })
-        : undefined;
+    if (phase && estateLoc)
+      await selectOrInsertItem(db, 'phaseLocations', {
+        phase: phase,
+        estateLocation: estateLoc,
+      });
+
     const buildingLoc = await selectOrInsertItem(db, 'buildingLocations', {
       building: building,
       district: district,
@@ -116,15 +114,18 @@ const mainWorker = async (db: Knex): Promise<void> => {
       raw: addr.latlng.raw,
       remark: addr.latlng.remark,
     });
-    const geocode = await selectOrInsertItem(db, 'geocodes', {
+    //Geocode
+    await selectOrInsertItem(db, 'geocodes', {
       buildingLocation: buildingLoc,
       latlng: latlng,
       result: addr.geocode?.result,
       remark: addr.geocode?.remark,
       match: addr.geocode?.match,
     });
+    // fetch floor, unit and valid addr and load into db
+    if (buildingLoc) await loadValidAddr(db, addr, buildingLoc);
   }
-
+  console.log(`Finished with ${db('addresses').count('id')} fetched and loaded.`);
   await db.destroy();
 };
 
@@ -149,20 +150,42 @@ const getBuildings = async (region: AddressAttribute, district: AddressAttribute
   return buildings;
 };
 
-const fetchBuildingInfo = async (building: Building) => {
-  const baseConfig = {
+const loadValidAddr = async (db: Knex, addr: Address, buildingLoc: number) => {
+  const config = {
     ...baseBuildingInfoConfig,
-    building: building.value,
-    zone: building.region.value,
-    district: building.district.value,
+    strno: addr.streetNo?.value || '',
+    street: addr.street?.value || '',
+    estate: addr.estate?.value || '',
+    phase: addr.phase?.value || '',
+    building: addr.building.value,
+    district: addr.district.value,
   };
-  const street = await fetchStreet(baseConfig);
-  const estate = await fetchEstate(baseConfig);
-  return {
-    ...building,
-    street: street,
-    estate: estate,
-  } as Building;
+  const floors = await fetchFloor(config);
+  let floorIdx = 0;
+  do {
+    config.floor = floors[floorIdx]?.value || '';
+    addr.floor = floors[floorIdx] || undefined;
+    const units = await fetchUnit(config);
+    let unitIdx = 0;
+    do {
+      addr.unit = units[unitIdx] || undefined;
+      const validAddr = await fetchValidAddr(addr);
+      // Load address into db
+      const floor = await selectOrInsertItem(db, 'floors', addr.floor);
+      const unit = await selectOrInsertItem(db, 'units', addr.unit);
+      const address = await selectOrInsertItem(db, 'addresses', {
+        buildingLocation: buildingLoc,
+        floor: floor,
+        unit: unit,
+      });
+      await selectOrInsertItem(db, 'validAddresses', {
+        address: address,
+        ...validAddr,
+      });
+      unitIdx++;
+    } while (unitIdx < units.length);
+    floorIdx++;
+  } while (floorIdx < floors.length);
 };
 
 export default mainWorker;

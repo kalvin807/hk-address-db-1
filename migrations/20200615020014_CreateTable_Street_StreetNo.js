@@ -2,12 +2,12 @@ exports.up = function (knex) {
   return knex.schema
     .createTable('streets', (table) => {
       table.increments('id').primary();
-      table.string('en_name', 200).notNullable();
-      table.string('zh_name', 200).notNullable();
+      table.string('en_name').notNullable();
+      table.string('zh_name').notNullable();
     })
     .createTable('streetNos', (table) => {
       table.increments('id').primary();
-      table.string('name', 100).notNullable();
+      table.string('name').notNullable();
     })
     .createTable('streetLocations', (table) => {
       // Same street can appear in different district 聯安街

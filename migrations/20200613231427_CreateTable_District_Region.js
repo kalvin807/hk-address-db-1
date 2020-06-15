@@ -2,13 +2,13 @@ exports.up = function (knex) {
   return knex.schema
     .createTable('regions', (table) => {
       table.increments('id').primary();
-      table.string('en_name', 100).unique().notNullable();
-      table.string('zh_name', 100).unique().notNullable();
+      table.string('en_name').unique().notNullable();
+      table.string('zh_name').unique().notNullable();
     })
     .createTable('districts', (table) => {
       table.increments('id').primary();
-      table.string('en_name', 100).unique().notNullable();
-      table.string('zh_name', 100).unique().notNullable();
+      table.string('en_name').unique().notNullable();
+      table.string('zh_name').unique().notNullable();
     })
     .createTable('districtLocations', (table) => {
       table.increments('id').primary();

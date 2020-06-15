@@ -1,5 +1,4 @@
 import { Geocode, LatLng } from '../model/geoModel';
-import { add, matches } from 'lodash';
 import { fetchGeocode, fetchLatLng } from './pkFetcher';
 
 import { Address } from '../model/addressModel';
@@ -55,12 +54,12 @@ export const getLatLng = async (addr: Address): Promise<LatLng> => {
   } else if (res?.success === false) {
     result.remark = 'Failed request';
   } else {
-    const hittedLatLng = findLatLng(addr, res.result);
-    if (!hittedLatLng) {
+    const hit = findLatLng(addr, res.result);
+    if (!hit) {
       result.remark = 'Not match';
     } else {
-      result.lat = hittedLatLng.lat;
-      result.lng = hittedLatLng.lng;
+      result.lat = hit.lat;
+      result.lng = hit.lng;
       result.remark = JSON.stringify({ match: res.result.map((result) => compareLatLngResult(addr, result)) });
     }
   }
