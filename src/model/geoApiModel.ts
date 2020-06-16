@@ -1,5 +1,3 @@
-import { LatLng } from './geoModel';
-
 export interface LongLatConfig {
   query: string;
 }

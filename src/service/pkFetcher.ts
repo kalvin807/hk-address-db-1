@@ -1,8 +1,6 @@
 import { GeocodingConfig, GeocodingResponse, LngLatResponse, LongLatConfig, pokeResponse } from '../model/geoApiModel';
 
 import { Address } from '../model/addressModel';
-import { LatLng } from '../model/geoModel';
-import { add } from 'lodash';
 import { fetch } from './fetcher';
 
 const fetchFromPK = async (url: string, config: LongLatConfig | GeocodingConfig): Promise<pokeResponse | undefined> => {

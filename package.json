@@ -1,11 +1,11 @@
 {
   "name": "hk-address-db",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Hong Kong full address cloned from post service",
   "main": "./dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node ./src/index.ts"
+    "start": "yarn build && node ./dist/index.js",
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
@@ -28,15 +28,15 @@
     "nodemon": "^2.0.4",
     "prettier": "^2.0.5",
     "ts-node": "^8.10.2",
-    "typescript": "^3.9.5"
+    "typescript": "^3.9.5",
+    "@types/tiny-async-pool": "^1.0.0"
   },
   "dependencies": {
     "axios": "^0.19.2",
     "dotenv": "^8.2.0",
-    "form-data": "^3.0.0",
     "knex": "^0.21.1",
     "lodash": "^4.17.15",
-    "mysql": "^2.18.1",
-    "mysql2": "^2.1.0"
+    "mysql2": "^2.1.0",
+    "tiny-async-pool": "^1.1.0"
   }
 }

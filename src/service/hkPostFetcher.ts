@@ -1,5 +1,11 @@
 import { Address, AddressAttribute, Building, StreetNo, VaildAddress } from '../model/addressModel';
-import { BaseConfig, BuildingConfig, BuildingInfoConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
+import {
+  BaseConfig,
+  BuildingConfig,
+  BuildingInfoConfig,
+  DistrictConfig,
+  baseBuildingInfoConfig,
+} from '../model/hkPostApiModel';
 import { fetch, post } from './fetcher';
 
 const extractFeatures = (rawStr: string): AddressAttribute[] => {
@@ -27,10 +33,9 @@ const fetchFromHKPost = async (
   }
 };
 
-export const fetchAllFromHKPost = async (url: string, configs: BaseConfig[]): Promise<AddressAttribute[][]> => {
-  const nestedRes: AddressAttribute[][] = [];
-  for (const config of configs) nestedRes.push(await fetchFromHKPost(url, config));
-  return nestedRes;
+export const fetchDistrict = async (config: DistrictConfig): Promise<AddressAttribute[]> => {
+  const url = process.env.DISTRICT_URL || ' ';
+  return fetchFromHKPost(url, config);
 };
 
 export const fetchStreet = async (config: BuildingInfoConfig): Promise<AddressAttribute[]> => {
@@ -131,7 +136,7 @@ export const fetchValidAddr = async (addr: Address): Promise<VaildAddress | unde
   return validAddr;
 };
 
-export const fetchBuildingInfo = async (building: Building) => {
+export const fetchBuildingInfo = async (building: Building): Promise<Building> => {
   const baseConfig = {
     ...baseBuildingInfoConfig,
     building: building.value,
