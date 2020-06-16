@@ -5,30 +5,24 @@ import {
   baseBuildingConfig,
   baseBuildingInfoConfig,
 } from '../model/hkPostApiModel';
-import {
-  fetchBuilding,
-  fetchFloor,
-  fetchPhase,
-  fetchStreet,
-  fetchStreetNo,
-  fetchUnit,
-  fetchValidAddr,
-} from './hkPostFetcher';
+import { fetchBuilding, fetchPhase, fetchStreet, fetchStreetNo, fetchBuildingInfo } from './hkPostFetcher';
 
-import Knex from 'knex';
 import isEqual from 'lodash/isEqual';
-import { selectOrInsertItem } from './db';
 
-export const getUniqueAddresses = async (building: Building) => {
+export const getUniqueAddresses = async (building: Building): Promise<Address[]> => {
   const addresses: Address[] = [];
   const buildingInfo: AddressAttribute = {
     zh_name: building.zh_name,
     en_name: building.en_name,
     value: building.value,
   };
-  if (!building.estate || building.estate.length < 1) {
+
+  // Fetch street and estate info of this building
+  const info = await fetchBuildingInfo(building);
+
+  if (!info.estate || info.estate.length < 1) {
     // Not a building from estate
-    building.street.forEach((street) => {
+    info.street.forEach((street) => {
       addresses.push({
         building: buildingInfo,
         region: building.region,
@@ -38,11 +32,12 @@ export const getUniqueAddresses = async (building: Building) => {
       });
     });
   } else {
-    for (const estate of building.estate) {
-      const addr = await getAddrFromEstate(buildingInfo, estate, building.street, building.region, building.district);
-      if (addr) addresses.push(addr);
-    }
+    const addrPromise = info.estate.map((estate) =>
+      getAddrFromEstate(buildingInfo, estate, info.street, info.region, info.district),
+    );
+    addresses.concat(await Promise.all(addrPromise));
   }
+
   // Add StreetNo if exist
   for (let i = 0; i < addresses.length; i++) {
     const addr = addresses[i];

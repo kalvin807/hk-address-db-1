@@ -1,51 +1,42 @@
 import { Address, AddressAttribute, Building } from '../model/addressModel';
-import { BuildingConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
-import { fetchBuilding, fetchFloor, fetchUnit, fetchValidAddr } from './hkPostFetcher';
+import { BuildingConfig, baseBuildingConfig, baseBuildingInfoConfig, DistrictConfig } from '../model/hkPostApiModel';
+import { fetchBuilding, fetchFloor, fetchUnit, fetchValidAddr, fetchDistrict } from './hkPostFetcher';
 import { getGeocoding, getLatLng } from './geo';
 
 import Knex from 'knex';
 import { selectOrInsertItem } from './db';
+import { getUniqueAddresses } from './address';
 
 const mainWorker = async (db: Knex): Promise<void> => {
-  // // Regions
-  // const regions: AddressAttribute[] = [
-  //   { value: '1', en_name: 'HONG KONG', zh_name: '香港' },
-  //   { value: '2', en_name: 'KOWLOON', zh_name: '九龍' },
-  //   { value: '3', en_name: 'NEW TERRITORIES', zh_name: '新界' },
-  // ];
+  // Regions
+  const regions: AddressAttribute[] = [
+    { value: '1', en_name: 'HONG KONG', zh_name: '香港' },
+    { value: '2', en_name: 'KOWLOON', zh_name: '九龍' },
+    { value: '3', en_name: 'NEW TERRITORIES', zh_name: '新界' },
+  ];
 
-  // // Districts
-  // const districtConfigs: DistrictConfig[] = regions.map((region) => ({
-  //   lang1: 'en_US',
-  //   zone_value: Number(region.value),
-  // }));
-  // const districts = await Promise.all(districtConfigs.map((config) => fetchDistrict(config)));
+  // Districts
+  const districtConfigs: DistrictConfig[] = regions.map((region) => ({
+    lang1: 'en_US',
+    zone_value: Number(region.value),
+  }));
+  const districtsbyRegion = await Promise.all(districtConfigs.map((config) => fetchDistrict(config)));
 
-  // // Buildings
-  // let buildings: Building[] = [];
-  // for (let i = 0; i < districts.length; i++) {
-  //   const region = regions[i];
-  //   const district = districts[i];
-  //   if (district)
-  //     for (const dist of district) {
-  //       console.log(`Finding buildings in ${dist.en_name}.`);
-  //       const tmp = await getBuildings(region, dist);
-  //       const tmpBuilding: Building[] = [];
-  //       // For each building fetch information with the building value
-  //       for (const b of tmp) tmpBuilding.push(await fetchBuildingInfo(b));
-  //       buildings = buildings.concat(tmpBuilding);
-  //     }
-  // }
+  // Buildings
+  let buildingPromise: Promise<Building[]>[] = [];
+  for (let i = 0; i < districtsbyRegion.length; i++) {
+    const region = regions[i];
+    const districts = districtsbyRegion[i];
+    if (districts) buildingPromise = buildingPromise.concat(districts.map((dist) => getBuildings(region, dist)));
+  }
+  const buildings = (await Promise.all(buildingPromise)).flat();
 
-  // // For each building fetch information with the building value
-  // // Convert building to unique building address
-  // let buildingAddr: Address[] = [];
-  // for (const building of buildings) {
-  //   const tmp = await getUniqueAddresses(building);
-  //   buildingAddr = buildingAddr.concat(tmp);
-  // }
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const buildingAddr: Address[] = require('./address.json');
+  // For each building fetch information with the building value
+  // Convert building to unique building address
+  let buildingAddr: Address[] = [];
+  const addrPromise = buildings.map((building) => getUniqueAddresses(building));
+  buildingAddr = buildingAddr.concat((await Promise.all(addrPromise)).flat());
+
   console.log(`${buildingAddr.length} of unique building found.`);
   for (const addr of buildingAddr) {
     //Fetch geo info from pokeguide api
