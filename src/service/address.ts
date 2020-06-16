@@ -5,9 +5,19 @@ import {
   baseBuildingConfig,
   baseBuildingInfoConfig,
 } from '../model/hkPostApiModel';
-import { fetchBuilding, fetchPhase, fetchStreet, fetchStreetNo } from './hkPostFetcher';
+import {
+  fetchBuilding,
+  fetchFloor,
+  fetchPhase,
+  fetchStreet,
+  fetchStreetNo,
+  fetchUnit,
+  fetchValidAddr,
+} from './hkPostFetcher';
 
+import Knex from 'knex';
 import isEqual from 'lodash/isEqual';
+import { selectOrInsertItem } from './db';
 
 export const getUniqueAddresses = async (building: Building) => {
   const addresses: Address[] = [];

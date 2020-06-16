@@ -8,21 +8,22 @@ export const fetch = async (
   filter: BaseConfig | BuildingConfig | BuildingInfoConfig | LongLatConfig | GeocodingConfig,
 ): Promise<any> => {
   url = url + concatOptions(filter);
-  console.log(url);
-  const res = await axios.get(url);
-  if (res.status !== 200) {
-    throw Error('HKPost Api returned' + res.status);
+  try {
+    const res = await axios.get(url);
+    if (res.status !== 200) throw Error('HKPost Api returned' + res.status);
+    return res.data;
+  } catch (err) {
+    console.error(err);
   }
-  return res.data;
 };
 
 const concatOptions = (options: BaseConfig | BuildingConfig | BuildingInfoConfig | LongLatConfig | GeocodingConfig) => {
   let str = '';
   Object.entries(options).forEach(([key, val]) => {
-    const tmp = `${key}=${val.toString()}`;
+    const tmp = `${key}=${encodeURIComponent(val.toString())}`;
     str = str + '&' + tmp;
   });
-  return encodeURI(str);
+  return str;
 };
 
 export const post = async (url: string, formData: any) => {

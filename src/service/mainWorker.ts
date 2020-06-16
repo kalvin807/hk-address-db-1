@@ -1,60 +1,52 @@
 import { Address, AddressAttribute, Building } from '../model/addressModel';
-import { BuildingConfig, DistrictConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
-import {
-  fetchAllFromHKPost,
-  fetchBuilding,
-  fetchBuildingInfo,
-  fetchEstate,
-  fetchFloor,
-  fetchStreet,
-  fetchUnit,
-  fetchValidAddr,
-} from './hkPostFetcher';
+import { BuildingConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
+import { fetchBuilding, fetchFloor, fetchUnit, fetchValidAddr } from './hkPostFetcher';
 import { getGeocoding, getLatLng } from './geo';
 
 import Knex from 'knex';
-import { getUniqueAddresses } from './address';
 import { selectOrInsertItem } from './db';
 
 const mainWorker = async (db: Knex): Promise<void> => {
-  // Regions
-  const regions: AddressAttribute[] = [
-    { value: '1', en_name: 'HONG KONG', zh_name: '香港' },
-    { value: '2', en_name: 'KOWLOON', zh_name: '九龍' },
-    { value: '3', en_name: 'NEW TERRITORIES', zh_name: '新界' },
-  ];
+  // // Regions
+  // const regions: AddressAttribute[] = [
+  //   { value: '1', en_name: 'HONG KONG', zh_name: '香港' },
+  //   { value: '2', en_name: 'KOWLOON', zh_name: '九龍' },
+  //   { value: '3', en_name: 'NEW TERRITORIES', zh_name: '新界' },
+  // ];
 
-  // Districts
-  const districtConfigs: DistrictConfig[] = regions.map((region) => ({
-    lang1: 'en_US',
-    zone_value: Number(region.value),
-  }));
-  const districtsUrl = process.env.DISTRICT_URL || ' ';
-  const districts = await fetchAllFromHKPost(districtsUrl, districtConfigs);
+  // // Districts
+  // const districtConfigs: DistrictConfig[] = regions.map((region) => ({
+  //   lang1: 'en_US',
+  //   zone_value: Number(region.value),
+  // }));
+  // const districts = await Promise.all(districtConfigs.map((config) => fetchDistrict(config)));
 
-  // Buildings
-  let buildings: Building[] = [];
-  for (let i = 0; i < districts.length; i++) {
-    const region = regions[i];
-    const district = districts[i];
-    if (district)
-      for (const dist of district) {
-        const tmp = await getBuildings(region, dist);
-        const tmpBuilding: Building[] = [];
-        // For each building fetch information with the building value
-        for (const b of tmp) tmpBuilding.push(await fetchBuildingInfo(b));
-        buildings = buildings.concat(tmpBuilding);
-      }
-  }
+  // // Buildings
+  // let buildings: Building[] = [];
+  // for (let i = 0; i < districts.length; i++) {
+  //   const region = regions[i];
+  //   const district = districts[i];
+  //   if (district)
+  //     for (const dist of district) {
+  //       console.log(`Finding buildings in ${dist.en_name}.`);
+  //       const tmp = await getBuildings(region, dist);
+  //       const tmpBuilding: Building[] = [];
+  //       // For each building fetch information with the building value
+  //       for (const b of tmp) tmpBuilding.push(await fetchBuildingInfo(b));
+  //       buildings = buildings.concat(tmpBuilding);
+  //     }
+  // }
 
-  // For each building fetch information with the building value
-  // Convert building to unique building address
-  let buildingAddr: Address[] = [];
-  for (const building of buildings) {
-    const tmp = await getUniqueAddresses(building);
-    buildingAddr = buildingAddr.concat(tmp);
-  }
-
+  // // For each building fetch information with the building value
+  // // Convert building to unique building address
+  // let buildingAddr: Address[] = [];
+  // for (const building of buildings) {
+  //   const tmp = await getUniqueAddresses(building);
+  //   buildingAddr = buildingAddr.concat(tmp);
+  // }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const buildingAddr: Address[] = require('./address.json');
+  console.log(`${buildingAddr.length} of unique building found.`);
   for (const addr of buildingAddr) {
     //Fetch geo info from pokeguide api
     addr.latlng = await getLatLng(addr);
@@ -107,6 +99,7 @@ const mainWorker = async (db: Knex): Promise<void> => {
       estate: estate,
       phase: phase,
     });
+    // Lat Lng
     const latlng = await selectOrInsertItem(db, 'latlngs', {
       buildingLocation: buildingLoc,
       lat: addr.latlng.lat,
@@ -122,7 +115,7 @@ const mainWorker = async (db: Knex): Promise<void> => {
       remark: addr.geocode?.remark,
       match: addr.geocode?.match,
     });
-    // fetch floor, unit and valid addr and load into db
+    // Fetch floor, unit and valid addr and load into db
     if (buildingLoc) await loadValidAddr(db, addr, buildingLoc);
   }
   console.log(`Finished with ${db('addresses').count('id')} fetched and loaded.`);
