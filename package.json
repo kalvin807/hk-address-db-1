@@ -18,6 +18,8 @@
   },
   "homepage": "https://github.com/kalvin807/hk-address-db#readme",
   "devDependencies": {
+    "@types/lodash": "^4.14.155",
+    "@types/request": "^2.48.5",
     "@typescript-eslint/eslint-plugin": "^3.2.0",
     "@typescript-eslint/parser": "^3.2.0",
     "eslint": "^7.2.0",
@@ -27,5 +29,14 @@
     "prettier": "^2.0.5",
     "ts-node": "^8.10.2",
     "typescript": "^3.9.5"
+  },
+  "dependencies": {
+    "axios": "^0.19.2",
+    "dotenv": "^8.2.0",
+    "form-data": "^3.0.0",
+    "knex": "^0.21.1",
+    "lodash": "^4.17.15",
+    "mysql": "^2.18.1",
+    "mysql2": "^2.1.0"
   }
 }
