@@ -1,10 +1,11 @@
+import Knex from 'knex';
+import asyncPool from 'tiny-async-pool';
+
 import { Address, AddressAttribute, Building } from '../model/addressModel';
 import { BuildingConfig, DistrictConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
 import { Geocode, LatLng } from '../model/geoModel';
 import { fetchBuilding, fetchDistrict, fetchFloor, fetchUnit, fetchValidAddr } from './hkPostFetcher';
 import { getGeocoding, getLatLng } from './geo';
-
-import Knex from 'knex';
 import { getUniqueAddresses } from './address';
 import { selectOrInsertItem } from './db';
 
@@ -31,14 +32,13 @@ const mainWorker = async (db: Knex): Promise<void> => {
     if (districts) buildingPromise = buildingPromise.concat(districts.map((dist) => getBuildings(region, dist)));
   }
   const buildings = (await Promise.all(buildingPromise)).flat();
-
+  console.log(`${buildings.length} of buildings found.`);
   // For each building fetch information with the building value
   // Convert building to unique building address
-  let buildingAddr: Address[] = [];
-  const addrPromise = buildings.map((building) => getUniqueAddresses(building));
-  buildingAddr = buildingAddr.concat((await Promise.all(addrPromise)).flat());
+  const addr = await asyncPool(100, buildings, getUniqueAddresses);
+  const buildingAddr: Address[] = addr.flat();
 
-  console.log(`${buildingAddr.length} of unique building found.`);
+  console.log(`${buildingAddr.length} of unique building location found.`);
 
   const buildingsLoc: (number | undefined)[] = [];
   for (const addr of buildingAddr) {
@@ -138,9 +138,9 @@ const fetchLoadPokeguideInfos = async (
   buildingAddr: Address[],
   buildingsLoc: (number | undefined)[],
 ): Promise<void> => {
-  // Fetch pokeguide Info
-  const latlngs = await Promise.all(buildingAddr.map((addr) => getLatLng(addr)));
-  const geocodes = await Promise.all(buildingAddr.map((addr) => getGeocoding(addr)));
+  // Fetch pokeguide Info, pool
+  const latlngs = await asyncPool(50, buildingAddr, getLatLng);
+  const geocodes = await asyncPool(50, buildingAddr, getGeocoding);
 
   for (let i = 0; i < buildingsLoc.length; i++) {
     const loc = buildingsLoc[i];

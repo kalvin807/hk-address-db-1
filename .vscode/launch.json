@@ -6,8 +6,9 @@
         "type": "node",
         "request": "launch",
         "cwd": "${workspaceRoot}",
-        "runtimeArgs": ["-r", "ts-node/register"],
-        "args": ["${workspaceRoot}/src/index.ts"]
+        "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
+        "args": ["${workspaceRoot}/src/index.ts"],
+        "sourceMaps": true,
       }
     ]
   }

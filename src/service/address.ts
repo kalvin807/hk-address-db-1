@@ -107,5 +107,6 @@ const getAddrFromEstate = async (
       }
     }
   }
+  await new Promise((r) => setTimeout(r, 1000)); // To prevent getting banned from HK post
   return addr;
 };

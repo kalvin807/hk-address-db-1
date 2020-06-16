@@ -12,7 +12,7 @@ Hong Kong full address cloned from post service
 2. Create Database
 3. Clone .env.tmp to .env and fill in db connection detail
 4. Create table by `yarn knex migrate:latest`
-5. Run the app by `yarn dev` or `npm dev`
+5. Run the app by `yarn start` or `npm start`
 
 ## Known Issue
 
