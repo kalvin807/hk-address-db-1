@@ -18,7 +18,7 @@ export const fetch = async (
 ): Promise<any> => {
   url = url + concatOptions(filter);
   try {
-    console.log(url);
+    await new Promise((r) => setTimeout(r, Math.random() * (5000 - 2000 + 1))); // To prevent getting banned from HK post
     const res = await axios.get(url);
     if (res.status !== 200) throw Error('Api returned' + res.status);
     return res.data;

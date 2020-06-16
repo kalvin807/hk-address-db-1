@@ -76,7 +76,6 @@ const getBuildings = async (region: AddressAttribute, district: AddressAttribute
       } as Building;
     });
   }
-
   return buildings;
 };
 
