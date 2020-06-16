@@ -5,7 +5,7 @@ import {
   baseBuildingConfig,
   baseBuildingInfoConfig,
 } from '../model/hkPostApiModel';
-import { fetchBuilding, fetchPhase, fetchStreet, fetchStreetNo, fetchBuildingInfo } from './hkPostFetcher';
+import { fetchBuilding, fetchBuildingInfo, fetchPhase, fetchStreet, fetchStreetNo } from './hkPostFetcher';
 
 import isEqual from 'lodash/isEqual';
 

@@ -18,6 +18,7 @@ export const fetch = async (
 ): Promise<any> => {
   url = url + concatOptions(filter);
   try {
+    console.log(url);
     const res = await axios.get(url);
     if (res.status !== 200) throw Error('Api returned' + res.status);
     return res.data;

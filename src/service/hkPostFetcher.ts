@@ -136,7 +136,7 @@ export const fetchValidAddr = async (addr: Address): Promise<VaildAddress | unde
   return validAddr;
 };
 
-export const fetchBuildingInfo = async (building: Building) => {
+export const fetchBuildingInfo = async (building: Building): Promise<Building> => {
   const baseConfig = {
     ...baseBuildingInfoConfig,
     building: building.value,
