@@ -16,13 +16,20 @@ Hong Kong full address cloned from post service
 
 ## Known Issue
 
-- It is design for running once only, it breaks when you run it 2nd+ time.
-- No Test
+- No Test (Decided not to go for it as this look like a script more then a complete software, instead try to be as information and easy to debug by comment and logging)
 - No api call fail remedies
+- Poorly written valid address fetcher (many edge case)
+- too many await, context switch wasted many time
+- It is slow, mainly bottleneck by pokeguide api and nested way to search valid address
 
-## Difficulty
+## Difficulties
 
 - Address is inconsistent in nature
 - HKPost Api is inconsistent
 - Api returns in HTML form
 - Not very experienced on DB design
+- Ditto for async design
+
+## Work Time
+
+Around 4-5 hrs per day as there are some preoccupied events
