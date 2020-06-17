@@ -3,6 +3,7 @@
 Hong Kong full address cloned from post service
 
 > Tested in Win10, Node 12, MySQL 5.7
+> Beware! You might get banned from hkpost address service or its cloudfront CDN service
 
 ## Run it
 

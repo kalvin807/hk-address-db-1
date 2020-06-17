@@ -30,31 +30,29 @@ const mainWorker = async (db: Knex): Promise<void> => {
     const districts = districtsByRegion[i];
     if (districts) {
       for (const district of districts) {
-        if (!findItemId(db, 'districts', district)) {
-          console.log(district.en_name);
-          const buildings = await getBuildings(region, district);
-          console.log(`${buildings.length} of buildings found.`);
-          // For each building fetch information with the building value
-          // Convert building to unique building address
-          const buildingAddrDistrict = await Promise.all(buildings.map((building) => getUniqueAddresses(building)));
-          const buildingAddr = (await buildingAddrDistrict).flat();
-          console.log(`${buildingAddr.length} of unique building location found.`);
+        console.log(district.en_name);
+        const buildings = await getBuildings(region, district);
+        console.log(`${buildings.length} of buildings found.`);
+        // For each building fetch information with the building value
+        // Convert building to unique building address
+        const buildingAddrDistrict = await asyncPool(25, buildings, getUniqueAddresses);
+        const buildingAddr = (await buildingAddrDistrict).flat();
+        console.log(`${buildingAddr.length} of unique building location found.`);
 
-          const buildingsLoc: (number | undefined)[] = [];
-          for (const addr of buildingAddr) {
-            const loc = await loadBuildingInfoToDB(db, addr);
-            buildingsLoc.push(loc);
-          }
+        const buildingsLoc: (number | undefined)[] = [];
+        for (const addr of buildingAddr) {
+          const loc = await loadBuildingInfoToDB(db, addr);
+          buildingsLoc.push(loc);
+        }
 
-          await fetchLoadPokeguideInfos(db, buildingAddr, buildingsLoc);
-          // Fetch floor, unit and valid addr and load into db
+        await fetchLoadPokeguideInfos(db, buildingAddr, buildingsLoc);
+        // Fetch floor, unit and valid addr and load into db
 
-          for (let i = 0; i < buildingsLoc.length; i++) {
-            const loc = buildingsLoc[i];
-            if (loc) await fetchLoadFloorUnitValidAddr(db, buildingAddr[i], loc);
-            const count = await db('addresses').count('id');
-            console.log(`Finished with ${count[0]['count(`id`)']} addresses fetched and loaded.`);
-          }
+        for (let i = 0; i < buildingsLoc.length; i++) {
+          const loc = buildingsLoc[i];
+          if (loc) await fetchLoadFloorUnitValidAddr(db, buildingAddr[i], loc);
+          const count = await db('addresses').count('id');
+          console.log(`Finished with ${count[0]['count(`id`)']} addresses fetched and loaded.`);
         }
       }
     }
@@ -141,8 +139,8 @@ const fetchLoadPokeguideInfos = async (
   buildingsLoc: (number | undefined)[],
 ): Promise<void> => {
   // Fetch pokeguide Info, pool
-  const latlngs = await asyncPool(50, buildingAddr, getLatLng);
-  const geocodes = await asyncPool(50, buildingAddr, getGeocoding);
+  const latlngs = await asyncPool(25, buildingAddr, getLatLng);
+  const geocodes = await asyncPool(25, buildingAddr, getGeocoding);
 
   for (let i = 0; i < buildingsLoc.length; i++) {
     const loc = buildingsLoc[i];
@@ -202,7 +200,7 @@ const fetchLoadFloorUnitValidAddr = async (db: Knex, addr: Address, buildingLoc:
     unit: floorUnit.unit,
   }));
 
-  const validAddrs = await asyncPool(100, validAddrConfig, fetchValidAddr);
+  const validAddrs = await asyncPool(25, validAddrConfig, fetchValidAddr);
 
   for (let i = 0; i < validAddrs.length; i++) {
     const validAddr = validAddrs[i];
