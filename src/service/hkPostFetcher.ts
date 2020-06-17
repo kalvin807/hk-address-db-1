@@ -10,15 +10,17 @@ import { fetch, post } from './fetcher';
 
 const extractFeatures = (rawStr: string): AddressAttribute[] => {
   const features: AddressAttribute[] = [];
-  rawStr.split('\n').map((line) => {
-    const matched = line.match(/([^"]+)">[ ]?(.*) &nbsp;\(([^)]+)/);
-    if (matched)
-      features.push({
-        value: matched[1],
-        en_name: matched[2],
-        zh_name: matched[3],
-      });
-  });
+  if (rawStr) {
+    rawStr.split('\n').map((line) => {
+      const matched = line.match(/([^"]+)">[ ]?(.*) &nbsp;\(([^)]+)/);
+      if (matched)
+        features.push({
+          value: matched[1],
+          en_name: matched[2],
+          zh_name: matched[3],
+        });
+    });
+  }
   return features;
 };
 const fetchFromHKPost = async (
@@ -27,7 +29,7 @@ const fetchFromHKPost = async (
 ): Promise<AddressAttribute[]> => {
   try {
     const res = await fetch(url, config);
-    if (res.match(/系統現時比較繁忙，請稍後再試。/gm)) throw new Error('HKPOST Server Currently down!');
+    if (res && res.match(/系統現時比較繁忙，請稍後再試。/gm)) throw new Error('HKPOST Server Currently down!');
     return extractFeatures(res);
   } catch (err) {
     throw err;
