@@ -33,7 +33,7 @@ export interface Building extends AddressAttribute {
   estate: AddressAttribute[];
 }
 
-export interface VaildAddress {
+export interface ValidAddress {
   zh_name?: string;
   en_name?: string;
   id?: number;

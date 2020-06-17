@@ -1,4 +1,4 @@
-import { Address, AddressAttribute, Building, StreetNo, VaildAddress } from '../model/addressModel';
+import { Address, AddressAttribute, Building, StreetNo, ValidAddress } from '../model/addressModel';
 import {
   BaseConfig,
   BuildingConfig,
@@ -84,7 +84,7 @@ export const fetchStreetNo = async (config: BuildingInfoConfig): Promise<StreetN
   return streetNos;
 };
 
-export const fetchValidAddr = async (addr: Address): Promise<VaildAddress | undefined> => {
+export const fetchValidAddr = async (addr: Address): Promise<ValidAddress | undefined> => {
   // Prepare form data
   const data: any = {
     zone: addr.region.value,
@@ -106,19 +106,19 @@ export const fetchValidAddr = async (addr: Address): Promise<VaildAddress | unde
 
   // Send the POST request
   const res = await post(url, data);
-  let validAddr: VaildAddress = { remark: '' };
+  let validAddr: ValidAddress = { remark: '' };
 
   // Grep the address from html
   if (res && res.data) {
     const rawHtml: string = res.data;
     const match = rawHtml.match(/<[^>]+><[^>]+><[^>]+><[^>]+><f[^>]+>(.*)<\/f/gm);
 
-    if (!match) validAddr.remark = 'Incorrect POST';
+    if (!match) validAddr.remark = 'Incorrect HTML';
 
     if (match && match.length > 0) {
       const validAddrs = match.map((str) => {
         const tmp = str.match(/<f[^>]+>(.*)<\/f/);
-        if (tmp) return tmp[1].replace(/<br \/\>/g, '\n');
+        if (tmp) return tmp[1].replace(/<br \/\>/g, ' ');
         else {
           validAddr.remark = 'Incorrect Regex when prettify address';
           return str;
@@ -132,7 +132,10 @@ export const fetchValidAddr = async (addr: Address): Promise<VaildAddress | unde
           zh_name: validAddrs[1],
         };
     }
+  } else {
+    validAddr.remark = 'Failed POST';
   }
+
   return validAddr;
 };
 

@@ -18,7 +18,7 @@ export const fetch = async (
 ): Promise<any> => {
   url = url + concatOptions(filter);
   try {
-    await new Promise((r) => setTimeout(r, Math.random() * (5000 - 2000 + 1))); // To prevent getting banned from HK post
+    await new Promise((r) => setTimeout(r, Math.random() * (3000 - 2000 + 1))); // To prevent getting banned from HK post
     const res = await axios.get(url);
     if (res.status !== 200) throw Error('Api returned' + res.status);
     return res.data;
@@ -34,6 +34,7 @@ export const post = async (
 ): Promise<any> => {
   url = url + concatOptions(formData);
   try {
+    await new Promise((r) => setTimeout(r, Math.random() * (3000 - 2000 + 1))); // To prevent getting banned from HK post
     const res = await axios.post(url);
     if (res.status !== 200) throw Error('Api returned' + res.status);
     return res;

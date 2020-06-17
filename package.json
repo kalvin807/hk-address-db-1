@@ -1,6 +1,6 @@
 {
   "name": "hk-address-db",
-  "version": "1.0.1",
+  "version": "1.1.1",
   "description": "Hong Kong full address cloned from post service",
   "main": "./dist/index.js",
   "scripts": {

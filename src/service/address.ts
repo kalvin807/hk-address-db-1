@@ -10,7 +10,7 @@ import { fetchBuilding, fetchBuildingInfo, fetchPhase, fetchStreet, fetchStreetN
 import isEqual from 'lodash/isEqual';
 
 export const getUniqueAddresses = async (building: Building): Promise<Address[]> => {
-  const addresses: Address[] = [];
+  let addresses: Address[] = [];
   const buildingInfo: AddressAttribute = {
     zh_name: building.zh_name,
     en_name: building.en_name,
@@ -19,8 +19,7 @@ export const getUniqueAddresses = async (building: Building): Promise<Address[]>
 
   // Fetch street and estate info of this building
   const info = await fetchBuildingInfo(building);
-
-  if (!info.estate || info.estate.length < 1) {
+  if (info.estate.length === 0 && info.street.length > 0) {
     // Not a building from estate
     info.street.forEach((street) => {
       addresses.push({
@@ -31,11 +30,19 @@ export const getUniqueAddresses = async (building: Building): Promise<Address[]>
         street: street,
       });
     });
-  } else {
-    const addrPromise = info.estate.map((estate) =>
-      getAddrFromEstate(buildingInfo, estate, info.street, info.region, info.district),
+  } else if (info.estate.length > 0) {
+    const addr = await Promise.all(
+      info.estate.map((estate) => getAddrFromEstate(buildingInfo, estate, info.street, info.region, info.district)),
     );
-    addresses.concat(await Promise.all(addrPromise));
+    addresses = addresses.concat(addr);
+  } else {
+    addresses.push({
+      building: buildingInfo,
+      region: building.region,
+      estate: undefined,
+      district: building.district,
+      street: undefined,
+    });
   }
 
   // Add StreetNo if exist
@@ -52,6 +59,7 @@ export const getUniqueAddresses = async (building: Building): Promise<Address[]>
     const streetNo = await fetchStreetNo(config);
     addresses[i] = { ...addr, streetNo: streetNo[0] || undefined };
   }
+
   return addresses;
 };
 
