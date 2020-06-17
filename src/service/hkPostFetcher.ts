@@ -27,6 +27,7 @@ const fetchFromHKPost = async (
 ): Promise<AddressAttribute[]> => {
   try {
     const res = await fetch(url, config);
+    if (res.match(/系統現時比較繁忙，請稍後再試。/gm)) throw new Error('HKPOST Server Currently down!');
     return extractFeatures(res);
   } catch (err) {
     throw err;
