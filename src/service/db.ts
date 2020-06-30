@@ -14,6 +14,10 @@ export const createClient = (): Knex =>
       database: process.env.DB_NAME!,
       charset: 'utf8mb4',
     },
+    pool: {
+      min: 0,
+      max: 10,
+    },
   });
 
 export const insertItem = async (
