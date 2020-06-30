@@ -1,11 +1,5 @@
 import { Address, AddressAttribute, Building, StreetNo, ValidAddress } from '../model/addressModel';
-import {
-  BaseConfig,
-  BuildingConfig,
-  BuildingInfoConfig,
-  DistrictConfig,
-  baseBuildingInfoConfig,
-} from '../model/hkPostApiModel';
+import { BuildingConfig, BuildingInfoConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
 import { fetch, post } from './fetcher';
 
 const extractFeatures = (rawStr: string): AddressAttribute[] => {
@@ -25,20 +19,15 @@ const extractFeatures = (rawStr: string): AddressAttribute[] => {
 };
 const fetchFromHKPost = async (
   url: string,
-  config: BaseConfig | BuildingConfig | BuildingInfoConfig,
+  config: BuildingConfig | BuildingInfoConfig,
 ): Promise<AddressAttribute[]> => {
   try {
     const res = await fetch(url, config);
     if (res && res.match(/系統現時比較繁忙，請稍後再試。/gm)) throw new Error('HKPOST Server Currently down!');
     return extractFeatures(res);
   } catch (err) {
-    throw err;
+    return [];
   }
-};
-
-export const fetchDistrict = async (config: DistrictConfig): Promise<AddressAttribute[]> => {
-  const url = process.env.DISTRICT_URL || ' ';
-  return fetchFromHKPost(url, config);
 };
 
 export const fetchStreet = async (config: BuildingInfoConfig): Promise<AddressAttribute[]> => {
@@ -74,16 +63,23 @@ export const fetchUnit = async (config: BuildingInfoConfig): Promise<AddressAttr
 // Edge case
 export const fetchStreetNo = async (config: BuildingInfoConfig): Promise<StreetNo[]> => {
   const url = process.env.STREETNO_URL || ' ';
-  const res = await fetch(url, config);
+  let res;
+  try {
+    res = await fetch(url, config);
+  } catch (err) {
+    throw err;
+  }
   const streetNos: StreetNo[] = [];
-  res.split('\n').forEach((line: string) => {
-    const matched = line.match(/"([^"]+)">[ ]?([^<]+)<\//);
-    if (matched)
-      streetNos.push({
-        value: matched[1],
-        name: matched[2],
-      });
-  });
+  if (res) {
+    res.split('\n').forEach((line: string) => {
+      const matched = line.match(/"([^"]+)">[ ]?([^<]+)<\//);
+      if (matched)
+        streetNos.push({
+          value: matched[1],
+          name: matched[2],
+        });
+    });
+  }
   return streetNos;
 };
 
@@ -108,7 +104,12 @@ export const fetchValidAddr = async (addr: Address): Promise<ValidAddress | unde
   const url = process.env.VALIDADDR_URL || ' ';
 
   // Send the POST request
-  const res = await post(url, data);
+  let res;
+  try {
+    res = await post(url, data);
+  } catch (err) {
+    throw err;
+  }
   let validAddr: ValidAddress = { remark: '' };
 
   // Grep the address from html
