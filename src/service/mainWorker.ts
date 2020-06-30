@@ -2,14 +2,15 @@ import Knex from 'knex';
 import asyncPool from 'tiny-async-pool';
 
 import { Address, AddressAttribute, Building } from '../model/addressModel';
-import { BuildingConfig, DistrictConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
+import { BuildingConfig, baseBuildingConfig, baseBuildingInfoConfig } from '../model/hkPostApiModel';
 import { Geocode, LatLng } from '../model/geoModel';
-import { fetchBuilding, fetchDistrict, fetchFloor, fetchUnit, fetchValidAddr } from './hkPostFetcher';
+import { fetchBuilding, fetchFloor, fetchUnit, fetchValidAddr } from './hkPostFetcher';
 import { getGeocoding, getLatLng } from './geo';
 import { getUniqueAddresses } from './address';
-import { selectOrInsertItem, findItemId } from './db';
+import { selectOrInsertItem } from './db';
+import districtsByRegion from '../static/districts.json';
 
-const mainWorker = async (db: Knex): Promise<void> => {
+const mainWorker = async (db: Knex, region_id: number): Promise<void> => {
   // Regions
   const regions: AddressAttribute[] = [
     { value: '1', en_name: 'HONG KONG', zh_name: '香港' },
@@ -17,46 +18,41 @@ const mainWorker = async (db: Knex): Promise<void> => {
     { value: '3', en_name: 'NEW TERRITORIES', zh_name: '新界' },
   ];
 
-  // Districts
-  const districtConfigs: DistrictConfig[] = regions.map((region) => ({
-    lang1: 'en_US',
-    zone_value: Number(region.value),
-  }));
-  const districtsByRegion = await Promise.all(districtConfigs.map((config) => fetchDistrict(config)));
+  const districtsInRegion = districtsByRegion[region_id];
+  const region = regions[region_id];
+  console.log(region.en_name);
+  for (const district of districtsInRegion) {
+    console.log(district.en_name);
+    const buildings = await getBuildings(region, district);
+    console.log(`${buildings.length} of buildings found.`);
+    // For each building fetch information with the building value
 
-  // Buildings
-  for (let i = 0; i < districtsByRegion.length; i++) {
-    const region = regions[i];
-    const districts = districtsByRegion[i];
-    if (districts) {
-      for (const district of districts) {
-        console.log(district.en_name);
-        const buildings = await getBuildings(region, district);
-        console.log(`${buildings.length} of buildings found.`);
-        // For each building fetch information with the building value
-        // Convert building to unique building address
-        const buildingAddrDistrict = await asyncPool(25, buildings, getUniqueAddresses);
-        const buildingAddr = (await buildingAddrDistrict).flat();
-        console.log(`${buildingAddr.length} of unique building location found.`);
+    // 1.Convert building to unique building address
+    const buildingAddrDistrict = await asyncPool(5, buildings, getUniqueAddresses);
+    const buildingAddr = (await buildingAddrDistrict).flat();
+    console.log(`${buildingAddr.length} of unique building location found.`);
 
-        const buildingsLoc: (number | undefined)[] = [];
-        for (const addr of buildingAddr) {
-          const loc = await loadBuildingInfoToDB(db, addr);
-          buildingsLoc.push(loc);
-        }
-
-        await fetchLoadPokeguideInfos(db, buildingAddr, buildingsLoc);
-        // Fetch floor, unit and valid addr and load into db
-
-        for (let i = 0; i < buildingsLoc.length; i++) {
-          const loc = buildingsLoc[i];
-          if (loc) await fetchLoadFloorUnitValidAddr(db, buildingAddr[i], loc);
-          const count = await db('addresses').count('id');
-          console.log(`Finished with ${count[0]['count(`id`)']} addresses fetched and loaded.`);
-        }
-      }
+    // 1.5 Load building location into DB
+    const buildingsLoc: (number | undefined)[] = [];
+    for (const addr of buildingAddr) {
+      const loc = await loadBuildingInfoToDB(db, addr);
+      buildingsLoc.push(loc);
     }
+
+    //2. Fill in pokeguide info
+    await fetchLoadPokeguideInfos(db, buildingAddr, buildingsLoc);
+
+    //3. Fetch floor, unit and valid addr and load into db
+    for (let i = 0; i < buildingsLoc.length; i++) {
+      const loc = buildingsLoc[i];
+      if (loc) await fetchLoadFloorUnitValidAddr(db, buildingAddr[i], loc);
+      const count = await db('addresses').count('id');
+      console.log(`Finished with ${count[0]['count(`id`)']} addresses fetched and loaded.`);
+    }
+    console.log('Taking 1 min rest to prevent lock.');
+    await new Promise((r) => setTimeout(r, 60000));
   }
+
   await db.destroy();
 };
 
@@ -139,8 +135,8 @@ const fetchLoadPokeguideInfos = async (
   buildingsLoc: (number | undefined)[],
 ): Promise<void> => {
   // Fetch pokeguide Info, pool
-  const latlngs = await asyncPool(25, buildingAddr, getLatLng);
-  const geocodes = await asyncPool(25, buildingAddr, getGeocoding);
+  const latlngs = await asyncPool(20, buildingAddr, getLatLng);
+  const geocodes = await asyncPool(20, buildingAddr, getGeocoding);
 
   for (let i = 0; i < buildingsLoc.length; i++) {
     const loc = buildingsLoc[i];
@@ -178,7 +174,7 @@ const fetchLoadFloorUnitValidAddr = async (db: Knex, addr: Address, buildingLoc:
   };
   const floors = await fetchFloor(config);
   const units = await asyncPool(
-    10,
+    5,
     floors.map((f) => ({ ...config, floor: f.value })),
     fetchUnit,
   );
@@ -194,22 +190,22 @@ const fetchLoadFloorUnitValidAddr = async (db: Knex, addr: Address, buildingLoc:
     }
   else addrRow.push(await loadAddress(db, undefined, undefined, buildingLoc));
 
-  const validAddrConfig = addrRow.map((floorUnit: { floor: AddressAttribute; unit: AddressAttribute }) => ({
-    ...addr,
-    floor: floorUnit.floor,
-    unit: floorUnit.unit,
-  }));
+  // const validAddrConfig = addrRow.map((floorUnit: { floor: AddressAttribute; unit: AddressAttribute }) => ({
+  //   ...addr,
+  //   floor: floorUnit.floor,
+  //   unit: floorUnit.unit,
+  // }));
 
-  const validAddrs = await asyncPool(25, validAddrConfig, fetchValidAddr);
+  // const validAddrs = await asyncPool(1, validAddrConfig, fetchValidAddr);
 
-  for (let i = 0; i < validAddrs.length; i++) {
-    const validAddr = validAddrs[i];
-    if (validAddr)
-      await selectOrInsertItem(db, 'validAddresses', {
-        address: addrRow[i].addrRow,
-        ...validAddr,
-      });
-  }
+  // for (let i = 0; i < validAddrs.length; i++) {
+  //   const validAddr = validAddrs[i];
+  //   if (validAddr)
+  //     await selectOrInsertItem(db, 'validAddresses', {
+  //       address: addrRow[i].addrRow,
+  //       ...validAddr,
+  //     });
+  // }
 };
 
 // Load address into db
