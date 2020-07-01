@@ -37,12 +37,11 @@ export const fetch = async (
     const res = await axios.get(url, {
       headers: headers,
     });
-    if (res.status === 500) throw Error('Internal Server Error (Overload?)');
+    if (res.status === 500) throw Error('Internal Server Error (Overload?) - ' + url);
     return res.data;
   } catch (err) {
-    console.log(url);
-    if (err.message === 'Request failed with status code 403') console.log('Blocked by Cloudfront');
-    console.error(err.message);
+    if (err.message === 'Request failed with status code 403') console.error('Blocked by Cloudfront - ' + url);
+    console.error(err.message + ' - ' + url);
     return undefined;
   }
 };
@@ -57,13 +56,12 @@ export const post = async (
     const res = await axios.post(url, {
       headers: { ...headers, referer: 'https://www.hongkongpost.hk/correct_addressing/index.jsp?lang=zh_TW' },
     });
-    if (res.status === 403) throw Error('Blocked by Cloudfront');
-    if (res.status === 500) throw Error('Internal Server Error (Overload?)');
+    if (res.status === 403) throw Error('Blocked by Cloudfront - ' + url);
+    if (res.status === 500) throw Error('Internal Server Error (Overload?) - ' + url);
     return res;
   } catch (err) {
-    console.log(url);
-    if (err.message === 'Request failed with status code 403') console.log('Blocked by Cloudfront');
-    console.error(err.message);
+    if (err.message === 'Request failed with status code 403') console.error('Blocked by Cloudfront - ' + url);
+    console.error(err.message + ' - ' + url);
     return undefined;
   }
 };
