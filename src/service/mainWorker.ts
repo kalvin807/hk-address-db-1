@@ -20,17 +20,17 @@ const mainWorker = async (db: Knex, region_id: number): Promise<void> => {
 
   const districtsInRegion = districtsByRegion[region_id];
   const region = regions[region_id];
-  console.log(region.en_name);
+  console.log(new Date() + ' ' + region.en_name);
   for (const district of districtsInRegion) {
-    console.log(district.en_name);
+    console.log(new Date() + ' ' + district.en_name);
     const buildings = await getBuildings(region, district);
-    console.log(`${buildings.length} of buildings found.`);
+    console.log(new Date() + ' ' + `${buildings.length} of buildings found.`);
     // For each building fetch information with the building value
 
     // 1.Convert building to unique building address
     const buildingAddrDistrict = await asyncPool(5, buildings, getUniqueAddresses);
     const buildingAddr = (await buildingAddrDistrict).flat();
-    console.log(`${buildingAddr.length} of unique building location found.`);
+    console.log(new Date() + ' ' + `${buildingAddr.length} of unique building location found.`);
 
     // 1.5 Load building location into DB
     const buildingsLoc: (number | undefined)[] = [];
@@ -47,9 +47,9 @@ const mainWorker = async (db: Knex, region_id: number): Promise<void> => {
       const loc = buildingsLoc[i];
       if (loc) await fetchLoadFloorUnitValidAddr(db, buildingAddr[i], loc);
       const count = await db('addresses').count('id');
-      console.log(`Finished with ${count[0]['count(`id`)']} addresses fetched and loaded.`);
+      console.log(new Date() + ' ' + `Finished with ${count[0]['count(`id`)']} addresses fetched and loaded.`);
     }
-    console.log('Taking 1 min rest to prevent lock.');
+    console.log(new Date() + ' ' + 'Taking 1 min rest to prevent lock.');
     await new Promise((r) => setTimeout(r, 60000));
   }
 
