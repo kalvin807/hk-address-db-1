@@ -15,6 +15,9 @@ Hong Kong full address cloned from post service
 4. Create table by `yarn knex migrate:latest`
 5. Run the app by `yarn start` or `npm start`
 
+## To-do
+- Optimize latlng search as discussed in [here](http://mysql.rjweb.org/doc.php/latlng#representation_choices)
+
 ## Known Issue
 
 - No Test (Decided not to go for it as this look like a script more then a complete software, instead try to be more informative and easy to debug by commenting and logging)

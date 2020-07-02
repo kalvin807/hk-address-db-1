@@ -8,6 +8,8 @@ exports.up = function (knex) {
       table.float('lng');
       table.json('raw');
       table.text('remark');
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
     })
     .createTable('geocodes', (table) => {
       table.increments('id').primary();
@@ -18,6 +20,10 @@ exports.up = function (knex) {
       table.string('result');
       table.text('remark');
       table.boolean('match');
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+
+      table.index('buildingLocation');
     });
 };
 

@@ -4,11 +4,15 @@ exports.up = function (knex) {
       table.increments('id').primary();
       table.string('en_name').notNullable();
       table.string('zh_name').notNullable();
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
     })
     .createTable('phases', (table) => {
       table.increments('id').primary();
       table.string('en_name').notNullable();
       table.string('zh_name').notNullable();
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
     })
     .createTable('estateLocations', (table) => {
       table.increments('id').primary();
@@ -20,6 +24,11 @@ exports.up = function (knex) {
       table.foreign('street').references('streets.id');
       table.integer('streetNo').unsigned();
       table.foreign('streetNo').references('streetNos.id');
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+      table.index('estate');
+      table.index('district');
+      table.index('street');
     })
     .createTable('phaseLocations', (table) => {
       table.increments('id').primary();
@@ -27,6 +36,10 @@ exports.up = function (knex) {
       table.foreign('phase').references('phases.id');
       table.integer('estateLocation').unsigned().notNullable();
       table.foreign('estateLocation').references('estateLocations.id');
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+      table.index('phase');
+      table.index('estateLocation');
     });
 };
 

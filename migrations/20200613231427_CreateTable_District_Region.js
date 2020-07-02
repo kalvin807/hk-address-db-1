@@ -4,11 +4,15 @@ exports.up = function (knex) {
       table.increments('id').primary();
       table.string('en_name').unique().notNullable();
       table.string('zh_name').unique().notNullable();
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
     })
     .createTable('districts', (table) => {
       table.increments('id').primary();
       table.string('en_name').unique().notNullable();
       table.string('zh_name').unique().notNullable();
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
     })
     .createTable('districtLocations', (table) => {
       table.increments('id').primary();
@@ -16,6 +20,10 @@ exports.up = function (knex) {
       table.foreign('district').references('districts.id');
       table.integer('region').unsigned().notNullable();
       table.foreign('region').references('regions.id');
+      table.timestamp('created_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at').notNull().defaultTo(knex.raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+      table.index('district');
+      table.index('region');
     });
 };
 
